@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Calculadora de horas formativas · Hoy Voy</title>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Nunito', sans-serif; background: #fafaf8; color: #1a1a1a; min-height: 100vh; }
+
+    .top-bar { background: #fff; border-bottom: 1px solid #e8e8e2; padding: 14px 2.5rem; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+    .top-bar-left { display: flex; align-items: center; gap: 12px; }
+    .top-bar img { width: 42px; height: 42px; }
+    .top-bar-label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: #aaa; }
+    .top-bar-right { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+
+    .btn { display: flex; align-items: center; gap: 7px; border: none; border-radius: 8px; padding: 9px 16px; font-size: 13px; font-weight: 700; font-family: inherit; cursor: pointer; transition: opacity 0.15s; }
+    .btn:hover { opacity: 0.8; }
+    .btn-dark { background: #1a1a1a; color: #fff; }
+    .btn-yellow { background: #f5e400; color: #1a1a1a; }
+    .btn svg { width: 15px; height: 15px; flex-shrink: 0; }
+
+    .hero { background: #f5e400; padding: 26px 2.5rem 22px; border-bottom: 1px solid #e0d000; }
+    .hero h1 { font-size: clamp(17px, 3vw, 22px); font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; }
+    .hero p { font-size: 13px; font-weight: 600; color: #555; margin-top: 5px; }
+
+    .main { max-width: 600px; margin: 2.5rem auto; padding: 0 1.5rem 4rem; }
+    .section-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.14em; color: #aaa; margin: 2rem 0 0.6rem; }
+
+    .card { background: #fff; border: 1px solid #e8e8e2; border-radius: 14px; overflow: hidden; }
+    .row { display: flex; align-items: center; justify-content: space-between; padding: 13px 20px; border-bottom: 1px solid #f0f0ea; gap: 16px; }
+    .row:last-child { border-bottom: none; }
+    .row-label { font-size: 14px; font-weight: 600; color: #333; flex: 1; }
+    .row input[type=number] {
+      width: 80px; text-align: right; font-size: 15px; font-weight: 700;
+      font-family: inherit; padding: 6px 10px;
+      border: 1.5px solid #ddd; border-radius: 8px;
+      background: #fffbe6; color: #1a1a1a; outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .row input[type=number]:focus { border-color: #c8ba00; box-shadow: 0 0 0 3px rgba(200,186,0,0.12); }
+    .calc-val { font-size: 14px; font-weight: 700; min-width: 56px; text-align: right; color: #1a1a1a; }
+    .calc-val.neg { color: #b94040; }
+
+    .metrics { display: grid; grid-template-columns: 1fr 1fr; }
+    .metric { padding: 20px; }
+    .metric:first-child { border-right: 1px solid #f0f0ea; }
+    .metric-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #aaa; margin-bottom: 6px; }
+    .metric-value { font-size: 26px; font-weight: 700; color: #1a1a1a; }
+
+    .result-card { border-radius: 14px; padding: 22px 24px; display: flex; align-items: center; justify-content: space-between; gap: 16px; border: 1px solid transparent; margin-top: 1.25rem; transition: background 0.2s, border-color 0.2s; }
+    .result-card.ok { background: #edfaf2; border-color: #b6e8cb; }
+    .result-card.ko { background: #fff5f5; border-color: #f0d0d0; }
+    .result-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: #777; margin-bottom: 4px; }
+    .result-sub { font-size: 14px; font-weight: 700; color: #1a1a1a; }
+    .result-value { font-size: 32px; font-weight: 700; white-space: nowrap; }
+    .result-card.ok .result-value { color: #1a7a45; }
+    .result-card.ko .result-value { color: #b94040; }
+
+    .send-bar { margin-top: 1.5rem; background: #fff; border: 1px solid #e8e8e2; border-radius: 14px; padding: 20px; }
+    .send-bar p { font-size: 13px; font-weight: 600; color: #555; margin-bottom: 14px; }
+    .send-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .send-row input[type=email] {
+      flex: 1; min-width: 200px; padding: 10px 14px;
+      border: 1.5px solid #ddd; border-radius: 9px;
+      font-family: inherit; font-size: 14px; font-weight: 600;
+      background: #fafaf8; outline: none;
+      transition: border-color 0.15s;
+    }
+    .send-row input[type=email]:focus { border-color: #c8ba00; }
+    .send-row select {
+      padding: 10px 12px; border: 1.5px solid #ddd; border-radius: 9px;
+      font-family: inherit; font-size: 14px; font-weight: 600;
+      background: #fafaf8; outline: none;
+    }
+    #send-status { font-size: 13px; font-weight: 700; margin-top: 10px; min-height: 20px; }
+    #send-status.ok { color: #1a7a45; }
+    #send-status.ko { color: #b94040; }
+
+    .readme-toggle { display: flex; align-items: center; gap: 8px; margin-top: 2rem; background: none; border: none; cursor: pointer; font-family: inherit; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #aaa; padding: 0; }
+    .readme-toggle svg { transition: transform 0.2s; }
+    .readme-toggle.open svg { transform: rotate(180deg); }
+    .readme-box { display: none; margin-top: 0.75rem; background: #fff; border: 1px solid #e8e8e2; border-radius: 14px; padding: 20px 24px; }
+    .readme-box.open { display: block; }
+    .readme-box h3 { font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+    .readme-box p { font-size: 13px; font-weight: 600; color: #444; line-height: 1.65; margin-bottom: 10px; }
+    .readme-box ul { padding-left: 18px; margin-bottom: 10px; }
+    .readme-box li { font-size: 13px; font-weight: 600; color: #444; line-height: 1.7; }
+    .readme-box .pill { display: inline-block; background: #f5e400; color: #1a1a1a; font-size: 11px; font-weight: 700; border-radius: 6px; padding: 2px 7px; margin-right: 4px; }
+
+    /* MODAL EXPORTAR */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.35); display: flex; align-items: center; justify-content: center; z-index: 100; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+    .modal-overlay.open { opacity: 1; pointer-events: all; }
+    .modal { background: #fff; border-radius: 18px; padding: 28px; width: 100%; max-width: 380px; margin: 1rem; box-shadow: 0 20px 60px rgba(0,0,0,0.15); transform: translateY(12px); transition: transform 0.2s; }
+    .modal-overlay.open .modal { transform: translateY(0); }
+    .modal h2 { font-size: 16px; font-weight: 800; margin-bottom: 6px; }
+    .modal p { font-size: 13px; color: #777; font-weight: 600; margin-bottom: 20px; }
+    .modal label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #aaa; display: block; margin-bottom: 6px; }
+    .modal select { width: 100%; padding: 10px 12px; border: 1.5px solid #e0e0da; border-radius: 9px; font-family: inherit; font-size: 14px; font-weight: 600; background: #fafaf8; outline: none; margin-bottom: 16px; }
+    .format-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+    .format-btn { border: 2px solid #e0e0da; border-radius: 10px; padding: 12px; text-align: center; cursor: pointer; transition: border-color 0.15s, background 0.15s; background: #fff; }
+    .format-btn.selected { border-color: #1a1a1a; background: #fafaf8; }
+    .format-btn .fmt-icon { font-size: 22px; margin-bottom: 4px; }
+    .format-btn .fmt-label { font-size: 13px; font-weight: 700; }
+    .format-btn .fmt-desc { font-size: 11px; color: #aaa; font-weight: 600; }
+    .modal-actions { display: flex; gap: 10px; }
+    .btn-cancel { flex: 1; padding: 11px; border: 1.5px solid #e0e0da; border-radius: 9px; background: #fff; font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+    .btn-download { flex: 2; padding: 11px; border: none; border-radius: 9px; background: #1a1a1a; color: #fff; font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer; transition: opacity 0.15s; }
+    .btn-download:hover { opacity: 0.8; }
+  </style>
+</head>
+<body>
+
+  <div class="top-bar">
+    <div class="top-bar-left">
+      <img src="https://es.hoy-voy.com/assets/header/hoy-voy-logo.png" alt="Hoy Voy" />
+      <span class="top-bar-label">Herramienta interna</span>
+    </div>
+    <div class="top-bar-right">
+      <button class="btn btn-dark" onclick="openModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Exportar
+      </button>
+    </div>
+  </div>
+
+  <div class="hero">
+    <h1>Calculadora de horas formativas del director</h1>
+    <p>Introduce los datos en los campos editables. Los cálculos se actualizan automáticamente.</p>
+  </div>
+
+  <div class="main">
+
+    <div class="section-label">Entradas</div>
+    <div class="card">
+      <div class="row"><span class="row-label">Número de centros / secciones</span><input type="number" id="b5" value="1" min="1" step="1" /></div>
+      <div class="row"><span class="row-label">Profesores activos</span><input type="number" id="b6" value="0" min="0" step="1" /></div>
+      <div class="row"><span class="row-label">Atención al alumno (ATT)</span><input type="number" id="b7" value="1" min="0" step="1" /></div>
+    </div>
+
+    <div class="section-label">Cálculo de reducciones</div>
+    <div class="card">
+      <div class="row"><span class="row-label">Secciones adicionales (a partir de la 2ª)</span><span class="calc-val" id="b10">0,0</span></div>
+      <div class="row"><span class="row-label">Reducción por profesores (1,5h por profe)</span><span class="calc-val neg" id="b11">0,0</span></div>
+      <div class="row"><span class="row-label">Reducción por ATT (0,5h por ATT)</span><span class="calc-val neg" id="b12">-0,5</span></div>
+      <div class="row"><span class="row-label">Reducción por secciones adicionales (1h/sección)</span><span class="calc-val neg" id="b13">0,0</span></div>
+    </div>
+
+    <div class="section-label">Resultado semanal / mensual</div>
+    <div class="card metrics">
+      <div class="metric"><div class="metric-label">Horas semanales</div><div class="metric-value" id="b16">31,5</div></div>
+      <div class="metric"><div class="metric-label">Horas mensuales</div><div class="metric-value" id="b17">138,6</div></div>
+    </div>
+
+    <div class="section-label">Tareas formativas realizadas</div>
+    <div class="card">
+      <div class="row"><span class="row-label">Cursos teóricos realizados</span><input type="number" id="b21" value="0" min="0" step="1" /></div>
+      <div class="row"><span class="row-label">Prácticas realizadas</span><input type="number" id="b22" value="0" min="0" step="1" /></div>
+      <div class="row"><span class="row-label">Masterclass realizadas</span><input type="number" id="b23" value="0" min="0" step="1" /></div>
+      <div class="row"><span class="row-label">Evaluadores realizados</span><input type="number" id="b24" value="0" min="0" step="1" /></div>
+      <div class="row"><span class="row-label">Asistencias a examen</span><input type="number" id="b25" value="0" min="0" step="1" /></div>
+      <div class="row"><span class="row-label">Alumnos subidos a examen</span><input type="number" id="b26" value="0" min="0" step="1" /></div>
+      <div class="row"><span class="row-label">Días festivos intersemanales</span><input type="number" id="b27" value="0" min="0" step="1" /></div>
+    </div>
+
+    <div id="result-card" class="result-card ko">
+      <div>
+        <div class="result-label">Resultado mensual</div>
+        <div class="result-sub" id="b30-sub">Te faltan por realizar este mes</div>
+      </div>
+      <div class="result-value" id="b30">-138,6 h</div>
+    </div>
+
+    <!-- ENVIAR INFORME -->
+    <div class="send-bar">
+      <p>Envía tu informe mensual a dirección. Se registrará automáticamente y recibirás una copia en PDF.</p>
+      <div class="send-row">
+        <input type="email" id="director-email" placeholder="tunombre@hoyvoy.com" />
+        <select id="send-month">
+          <option value="Enero">Enero</option>
+          <option value="Febrero">Febrero</option>
+          <option value="Marzo">Marzo</option>
+          <option value="Abril">Abril</option>
+          <option value="Mayo" selected>Mayo</option>
+          <option value="Junio">Junio</option>
+          <option value="Julio">Julio</option>
+          <option value="Agosto">Agosto</option>
+          <option value="Septiembre">Septiembre</option>
+          <option value="Octubre">Octubre</option>
+          <option value="Noviembre">Noviembre</option>
+          <option value="Diciembre">Diciembre</option>
+        </select>
+        <button class="btn btn-yellow" onclick="sendReport()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          Enviar informe
+        </button>
+      </div>
+      <div id="send-status"></div>
+    </div>
+
+    <!-- README -->
+    <button class="readme-toggle" id="readme-btn" onclick="toggleReadme()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      Cómo funciona esta calculadora
+    </button>
+    <div class="readme-box" id="readme-box">
+      <h3>¿Qué calcula esta herramienta?</h3>
+      <p>Calcula las horas formativas mensuales que le corresponden a un director, en función de su estructura de centros y equipo, y las compara con las tareas formativas realizadas durante el mes.</p>
+      <h3 style="margin-top:16px;">Entradas del director</h3>
+      <ul>
+        <li><span class="pill">Centros</span> A partir del 2º, cada sección adicional resta 1h semanal.</li>
+        <li><span class="pill">Profesores</span> Cada profesor activo resta 1,5h semanales.</li>
+        <li><span class="pill">ATT</span> Cada hora de atención al alumno resta 0,5h semanales.</li>
+      </ul>
+      <h3 style="margin-top:16px;">Fórmula de horas base</h3>
+      <p>El director parte de <strong>32h semanales</strong> (40h × 80%). Las horas mensuales se calculan como: <strong>(horas semanales ÷ 5) × 22 días laborables</strong>.</p>
+      <h3 style="margin-top:16px;">Peso de cada tarea</h3>
+      <ul>
+        <li><span class="pill">Curso teórico</span> 16h por curso</li>
+        <li><span class="pill">Práctica</span> 0,75h por práctica</li>
+        <li><span class="pill">Masterclass</span> 2h por sesión</li>
+        <li><span class="pill">Evaluador</span> 1h</li>
+        <li><span class="pill">Asistencia examen</span> 1h</li>
+        <li><span class="pill">Alumno a examen</span> 0,75h</li>
+        <li><span class="pill">Festivo intersemanal</span> Descuenta horas semanales ÷ 5 por día</li>
+      </ul>
+      <h3 style="margin-top:16px;">Resultado</h3>
+      <p><strong style="color:#b94040;">Rojo (negativo)</strong> → faltan horas por realizar. <strong style="color:#1a7a45;">Verde (positivo)</strong> → horas acumuladas de más.</p>
+    </div>
+
+  </div>
+
+  <!-- MODAL EXPORTAR -->
+  <div class="modal-overlay" id="modal-overlay" onclick="closeModalOutside(event)">
+    <div class="modal">
+      <h2>Exportar informe</h2>
+      <p>Elige el mes y el formato de exportación.</p>
+      <label>Mes</label>
+      <select id="export-month">
+        <option value="Enero">Enero</option><option value="Febrero">Febrero</option>
+        <option value="Marzo">Marzo</option><option value="Abril">Abril</option>
+        <option value="Mayo" selected>Mayo</option><option value="Junio">Junio</option>
+        <option value="Julio">Julio</option><option value="Agosto">Agosto</option>
+        <option value="Septiembre">Septiembre</option><option value="Octubre">Octubre</option>
+        <option value="Noviembre">Noviembre</option><option value="Diciembre">Diciembre</option>
+      </select>
+      <label>Formato</label>
+      <div class="format-btns">
+        <div class="format-btn selected" id="fmt-pdf" onclick="selectFmt('pdf')">
+          <div class="fmt-icon">📄</div><div class="fmt-label">PDF</div><div class="fmt-desc">Para compartir</div>
+        </div>
+        <div class="format-btn" id="fmt-xlsx" onclick="selectFmt('xlsx')">
+          <div class="fmt-icon">📊</div><div class="fmt-label">Excel</div><div class="fmt-desc">Para editar</div>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
+        <button class="btn-download" onclick="doExport()">Descargar</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwevUGoPPns9wpGSwv_pC6b3y9xaxOCMQses7Ln9lvJH8frWOGYBPRfwcJ8yAeDpqpRCg/exec';
+    const fmt = n => n.toFixed(1).replace('.', ',');
+    const val = id => parseFloat(document.getElementById(id).value) || 0;
+    let state = {};
+
+    function calc() {
+      const b5=val('b5'), b6=val('b6'), b7=val('b7');
+      const b10=Math.max(b5-1,0), b11=-1.5*b6, b12=-0.5*b7, b13=b10*-1;
+      const b16=32+b11+b12+b13, b17=(b16/5)*22;
+
+      document.getElementById('b10').textContent=fmt(b10);
+      document.getElementById('b11').textContent=fmt(b11);
+      document.getElementById('b12').textContent=fmt(b12);
+      document.getElementById('b13').textContent=fmt(b13);
+      document.getElementById('b16').textContent=fmt(b16);
+      document.getElementById('b17').textContent=fmt(b17);
+
+      const b21=val('b21'),b22=val('b22'),b23=val('b23'),b24=val('b24'),b25=val('b25'),b26=val('b26'),b27=val('b27');
+      const b30=b17-(b21*16)-(b22*0.75)-(b23*2)-b24-b25-(b26*0.75)-(b27*(b16/5));
+
+      const display=Math.abs(b30).toFixed(1).replace('.', ',')+' h';
+      document.getElementById('b30').textContent=(b30>0?'-':'+')+display;
+      const card=document.getElementById('result-card'), sub=document.getElementById('b30-sub');
+      if(b30>0){ card.className='result-card ko'; sub.textContent='Te faltan por realizar este mes'; }
+      else if(b30<0){ card.className='result-card ok'; sub.textContent='Llevas acumuladas de más este mes'; }
+      else { card.className='result-card ok'; sub.textContent='Justo al día ✓'; }
+
+      state={b5,b6,b7,b10,b11,b12,b13,b16,b17,b21,b22,b23,b24,b25,b26,b27,b30};
+    }
+
+    document.querySelectorAll('input[type=number]').forEach(i=>i.addEventListener('input',calc));
+    calc();
+
+    // README
+    function toggleReadme() {
+      document.getElementById('readme-box').classList.toggle('open');
+      document.getElementById('readme-btn').classList.toggle('open');
+    }
+
+    // ENVIAR INFORME
+    async function sendReport() {
+      const email = document.getElementById('director-email').value.trim();
+      const month = document.getElementById('send-month').value;
+      const status = document.getElementById('send-status');
+
+      if (!email) { status.className='ko'; status.textContent='Introduce tu email @hoyvoy.com'; return; }
+      if (!email.endsWith('@hoyvoy.com')) { status.className='ko'; status.textContent='Usa tu cuenta @hoyvoy.com'; return; }
+
+      const nombre = email.split('@')[0].replace('.', ' ').replace(/\b\w/g, l=>l.toUpperCase());
+      const payload = { ...state, email, nombre, mes: month };
+
+      status.className=''; status.textContent='Enviando...';
+
+      try {
+        await fetch(SCRIPT_URL, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        status.className='ok';
+        status.textContent='✓ Informe enviado correctamente. Generando tu copia PDF...';
+        setTimeout(() => exportPDF(`HorasFormativas_${month}_${nombre.replace(' ','_')}`, month, nombre), 800);
+      } catch(e) {
+        status.className='ko';
+        status.textContent='Error al enviar. Inténtalo de nuevo.';
+      }
+    }
+
+    // MODAL EXPORTAR
+    let selectedFmt='pdf';
+    function openModal(){ document.getElementById('modal-overlay').classList.add('open'); }
+    function closeModal(){ document.getElementById('modal-overlay').classList.remove('open'); }
+    function closeModalOutside(e){ if(e.target===document.getElementById('modal-overlay')) closeModal(); }
+    function selectFmt(f){
+      selectedFmt=f;
+      document.getElementById('fmt-pdf').classList.toggle('selected',f==='pdf');
+      document.getElementById('fmt-xlsx').classList.toggle('selected',f==='xlsx');
+    }
+    function doExport(){
+      const month=document.getElementById('export-month').value;
+      const email=document.getElementById('director-email').value.trim();
+      const nombre=email ? email.split('@')[0].replace('.',' ').replace(/\b\w/g,l=>l.toUpperCase()) : 'Director';
+      const filename=`HorasFormativas_${month}`;
+      if(selectedFmt==='xlsx') exportXLSX(filename, month);
+      else exportPDF(filename, month, nombre);
+      closeModal();
+    }
+
+    function exportXLSX(filename, month){
+      const s=state;
+      const rows=[
+        ['Calculadora de Horas Formativas del Director — Hoy Voy',''],
+        ['Mes', month],[''],
+        ['ENTRADAS',''],
+        ['Número de centros / secciones', s.b5],
+        ['Profesores activos', s.b6],
+        ['Atención al alumno (ATT)', s.b7],[''],
+        ['REDUCCIONES',''],
+        ['Secciones adicionales', s.b10],
+        ['Reducción por profesores (1,5h/profe)', s.b11],
+        ['Reducción por ATT (0,5h/ATT)', s.b12],
+        ['Reducción por secciones adicionales', s.b13],[''],
+        ['RESULTADO SEMANAL / MENSUAL',''],
+        ['Horas semanales', s.b16],
+        ['Horas mensuales', s.b17],[''],
+        ['TAREAS REALIZADAS',''],
+        ['Cursos teóricos (×16h)', s.b21],
+        ['Prácticas (×0,75h)', s.b22],
+        ['Masterclass (×2h)', s.b23],
+        ['Evaluadores (×1h)', s.b24],
+        ['Asistencias a examen (×1h)', s.b25],
+        ['Alumnos a examen (×0,75h)', s.b26],
+        ['Días festivos', s.b27],[''],
+        ['RESULTADO FINAL', s.b30>0 ? -Math.abs(s.b30) : Math.abs(s.b30)],
+        ['Estado', s.b30>0?'Faltan horas':s.b30<0?'Horas acumuladas de más':'Al día'],
+      ];
+      const ws=XLSX.utils.aoa_to_sheet(rows);
+      ws['!cols']=[{wch:42},{wch:16}];
+      const wb=XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb,ws,'Informe');
+      XLSX.writeFile(wb,`${filename}.xlsx`);
+    }
+
+    function exportPDF(filename, month, nombre='Director'){
+      const s=state;
+      const resultSign=s.b30>0?'-':'+';
+      const resultVal=Math.abs(s.b30).toFixed(1).replace('.',',')+' h';
+      const resultText=s.b30>0?'Te faltan por realizar este mes':s.b30<0?'Llevas horas acumuladas de más':'Justo al día';
+      const resultColor=s.b30>0?'#b94040':'#1a7a45';
+      const resultBg=s.b30>0?'#fff5f5':'#edfaf2';
+      const resultBorder=s.b30>0?'#f0d0d0':'#b6e8cb';
+
+      const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"/>
+      <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet"/>
+      <style>
+        *{box-sizing:border-box;margin:0;padding:0;}
+        body{font-family:'Nunito',sans-serif;color:#1a1a1a;padding:24px 32px;width:210mm;}
+        .logo-row{display:flex;align-items:center;gap:10px;margin-bottom:18px;}
+        .logo-row img{width:36px;height:36px;}
+        .logo-row span{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#aaa;}
+        h1{font-size:15px;font-weight:800;text-transform:uppercase;letter-spacing:0.05em;background:#f5e400;padding:10px 14px;border-radius:8px;margin-bottom:4px;}
+        .meta{font-size:12px;font-weight:600;color:#777;margin-bottom:16px;padding-left:2px;}
+        .cols{display:grid;grid-template-columns:1fr 1fr;gap:0 28px;}
+        .section{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:#aaa;margin:14px 0 6px;}
+        .row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f0f0ea;font-size:12px;font-weight:600;}
+        .row span:last-child{font-weight:700;}
+        .neg{color:#b94040;}
+        .result{margin-top:16px;border-radius:10px;padding:14px 18px;display:flex;justify-content:space-between;align-items:center;background:${resultBg};border:1px solid ${resultBorder};}
+        .result-left .label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#777;margin-bottom:3px;}
+        .result-left .sub{font-size:13px;font-weight:700;}
+        .result-value{font-size:26px;font-weight:700;color:${resultColor};}
+        .footer{margin-top:20px;font-size:10px;color:#bbb;font-weight:600;text-align:center;}
+        @media print{@page{size:A4;margin:0;}body{padding:18px 28px;-webkit-print-color-adjust:exact;print-color-adjust:exact;}}
+      </style></head><body>
+      <div class="logo-row"><img src="https://es.hoy-voy.com/assets/header/hoy-voy-logo.png"/><span>Herramienta interna · Hoy Voy</span></div>
+      <h1>Horas Formativas del Director</h1>
+      <div class="meta">Informe de ${month} · ${nombre}</div>
+      <div class="cols">
+        <div>
+          <div class="section">Entradas</div>
+          <div class="row"><span>Centros / secciones</span><span>${s.b5}</span></div>
+          <div class="row"><span>Profesores activos</span><span>${s.b6}</span></div>
+          <div class="row"><span>ATT</span><span>${s.b7}</span></div>
+          <div class="section">Reducciones</div>
+          <div class="row"><span>Secciones adicionales</span><span>${s.b10.toFixed(1)}</span></div>
+          <div class="row"><span>Por profesores</span><span class="neg">${s.b11.toFixed(1)}</span></div>
+          <div class="row"><span>Por ATT</span><span class="neg">${s.b12.toFixed(1)}</span></div>
+          <div class="row"><span>Por secciones</span><span class="neg">${s.b13.toFixed(1)}</span></div>
+          <div class="section">Resultado</div>
+          <div class="row"><span>Horas semanales</span><span>${s.b16.toFixed(1)}</span></div>
+          <div class="row"><span>Horas mensuales</span><span>${s.b17.toFixed(1)}</span></div>
+        </div>
+        <div>
+          <div class="section">Tareas realizadas</div>
+          <div class="row"><span>Cursos teóricos (×16h)</span><span>${s.b21}</span></div>
+          <div class="row"><span>Prácticas (×0,75h)</span><span>${s.b22}</span></div>
+          <div class="row"><span>Masterclass (×2h)</span><span>${s.b23}</span></div>
+          <div class="row"><span>Evaluadores (×1h)</span><span>${s.b24}</span></div>
+          <div class="row"><span>Asistencias examen (×1h)</span><span>${s.b25}</span></div>
+          <div class="row"><span>Alumnos a examen (×0,75h)</span><span>${s.b26}</span></div>
+          <div class="row"><span>Días festivos</span><span>${s.b27}</span></div>
+        </div>
+      </div>
+      <div class="result">
+        <div class="result-left"><div class="label">Resultado mensual</div><div class="sub">${resultText}</div></div>
+        <div class="result-value">${resultSign}${resultVal}</div>
+      </div>
+      <div class="footer">Generado por la Calculadora de Horas Formativas · Hoy Voy</div>
+      </body></html>`;
+
+      const w=window.open('','_blank');
+      w.document.write(html);
+      w.document.close();
+      w.onload=()=>{ w.print(); };
+    }
+  </script>
+</body>
+</html>
