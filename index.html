@@ -66,8 +66,7 @@
       flex: 1; min-width: 200px; padding: 10px 14px;
       border: 1.5px solid #ddd; border-radius: 9px;
       font-family: inherit; font-size: 14px; font-weight: 600;
-      background: #fafaf8; outline: none;
-      transition: border-color 0.15s;
+      background: #fafaf8; outline: none; transition: border-color 0.15s;
     }
     .send-row input[type=email]:focus { border-color: #c8ba00; }
     .send-row select {
@@ -78,6 +77,15 @@
     #send-status { font-size: 13px; font-weight: 700; margin-top: 10px; min-height: 20px; }
     #send-status.ok { color: #1a7a45; }
     #send-status.ko { color: #b94040; }
+    .pin-step { display: none; margin-top: 12px; }
+    .pin-step input {
+      width: 100%; padding: 12px; font-size: 24px; font-weight: 800;
+      letter-spacing: 0.3em; text-align: center;
+      border: 1.5px solid #c8ba00; border-radius: 9px;
+      background: #fffbe6; font-family: inherit; outline: none;
+      margin-bottom: 10px;
+    }
+    .pin-step p { font-size: 12px; color: #888; margin-bottom: 10px; }
 
     .readme-toggle { display: flex; align-items: center; gap: 8px; margin-top: 2rem; background: none; border: none; cursor: pointer; font-family: inherit; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #aaa; padding: 0; }
     .readme-toggle svg { transition: transform 0.2s; }
@@ -176,28 +184,36 @@
     <!-- ENVIAR INFORME -->
     <div class="send-bar">
       <p>Envía tu informe mensual a dirección. Se registrará automáticamente y recibirás una copia en PDF.</p>
-      <div class="send-row">
-        <input type="email" id="director-email" placeholder="tunombre@hoyvoy.com" />
-        <select id="send-month">
-          <option value="Enero">Enero</option>
-          <option value="Febrero">Febrero</option>
-          <option value="Marzo">Marzo</option>
-          <option value="Abril">Abril</option>
-          <option value="Mayo" selected>Mayo</option>
-          <option value="Junio">Junio</option>
-          <option value="Julio">Julio</option>
-          <option value="Agosto">Agosto</option>
-          <option value="Septiembre">Septiembre</option>
-          <option value="Octubre">Octubre</option>
-          <option value="Noviembre">Noviembre</option>
-          <option value="Diciembre">Diciembre</option>
-        </select>
-        <button class="btn btn-yellow" onclick="sendReport()">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-          Enviar informe
-        </button>
+      <div id="step-email-send">
+        <div class="send-row">
+          <input type="email" id="director-email" placeholder="tunombre@hoyvoy.com" />
+          <select id="send-month">
+            <option value="Enero">Enero</option>
+            <option value="Febrero">Febrero</option>
+            <option value="Marzo">Marzo</option>
+            <option value="Abril">Abril</option>
+            <option value="Mayo" selected>Mayo</option>
+            <option value="Junio">Junio</option>
+            <option value="Julio">Julio</option>
+            <option value="Agosto">Agosto</option>
+            <option value="Septiembre">Septiembre</option>
+            <option value="Octubre">Octubre</option>
+            <option value="Noviembre">Noviembre</option>
+            <option value="Diciembre">Diciembre</option>
+          </select>
+          <button class="btn btn-yellow" onclick="requestSendPin()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            Enviar informe
+          </button>
+        </div>
+        <div id="send-status"></div>
       </div>
-      <div id="send-status"></div>
+      <div class="pin-step" id="step-pin-send">
+        <p id="pin-send-desc">Hemos enviado un código de verificación a tu email. Introdúcelo para confirmar el envío.</p>
+        <input type="text" id="send-pin" placeholder="000000" maxlength="6" inputmode="numeric" />
+        <button class="btn btn-dark" style="width:100%" onclick="confirmSend()">Confirmar y enviar</button>
+        <div id="send-status-pin" style="font-size:13px;font-weight:700;color:#b94040;margin-top:8px;"></div>
+      </div>
     </div>
 
     <!-- README -->
